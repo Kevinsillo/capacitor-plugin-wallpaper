@@ -1,11 +1,59 @@
-# capacitor-plugin-wallpapers
+<p align="center">
+    <br />
+    <img src="https://user-images.githubusercontent.com/236501/85893648-1c92e880-b7a8-11ea-926d-95355b8175c7.png" width="128" height="128" />
+</p>
+<h3 align="center">Wallpaper</h3>
+<p align="center">
+    <strong><code>@Kevinsillo/capacitor-plugin-wallpaper</code></strong>
+</p>
+<p align="center">
+    A Capacitor community plugin that enables functionality to set the device's wallpaper, supporting both the lock screen and the home screen, with options to apply the image in different modes: fit, fill, stretch, and center.
+</p>
 
-Allows you to use the functionality to edit the device's wallpaper, both the lock screen and the home screen.
+<p align="center">
+    <img src="https://img.shields.io/maintenance/yes/2024?style=flat-square" />    
+    <a href="https://github.com/capacitor-community/example/actions?query=workflow%3A%22CI%22">
+        <img src="https://img.shields.io/github/workflow/status/capacitor-community/example/CI?style=flat-square" />
+    </a>
+    <a href="https://www.npmjs.com/package/@capacitor-community/example">
+        <img src="https://img.shields.io/npm/l/@capacitor-community/example?style=flat-square" />
+    </a>
+    <br/>
+    <a href="https://www.npmjs.com/package/@capacitor-community/example">
+        <img src="https://img.shields.io/npm/dw/@capacitor-community/example?style=flat-square" />
+    </a>
+    <a href="https://www.npmjs.com/package/@capacitor-community/example">
+        <img src="https://img.shields.io/npm/v/@capacitor-community/example?style=flat-square" />
+    </a>
+    <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+    <a href="#contributors-">
+        <img src="https://img.shields.io/badge/all%20contributors-0-orange?style=flat-square" />
+    </a>
+    <!-- ALL-CONTRIBUTORS-BADGE:END -->
+</p>
+
+## Maintainers
+
+| Maintainer | GitHub | Social |
+| -----------| -------| -------|
+| Kevinsillo | [Kevinsillo](https://github.com/Kevinsillo) | [@Quebinaso](https://twitter.com/Quebinaso) |
 
 ## Install
 
+First you need clone this project, install and pack it.
+
 ```bash
-npm install capacitor-plugin-wallpapers
+git clone https://github.com/Kevinsillo/capacitor-plugin-wallpaper.git
+cd capacitor-plugin-wallpaper
+npm install
+npm run build
+npm pack
+```
+
+Then you can install the plugin in your project.
+
+```bash
+npm install /path/to/capacitor-plugin-wallpaper-x.x.x.tgz
 npx cap sync
 ```
 
