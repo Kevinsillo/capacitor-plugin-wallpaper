@@ -56,11 +56,9 @@ public class WallpaperPlugin extends Plugin {
         // Adapt the Bitmap based on the display mode
         Bitmap processedBitmap = adaptBitmapForDisplay(originalBitmap, display);
 
-        if (processedBitmap == null) {
-            // this.result.put("status", "error");
-            // this.result.put("message", "Failed to process the image!");
-            // call.resolve(this.result);
-            call.reject("Failed to process the image!");
+        // Recycle the original Bitmap
+        if (originalBitmap != null && !originalBitmap.isRecycled()) {
+            originalBitmap.recycle();
         }
 
         try {
@@ -72,16 +70,22 @@ public class WallpaperPlugin extends Plugin {
             this.result.put("message", "Wallpaper (" + display + ") updated successfully for " + target + " screen!");
         } catch (Exception e) {
             // Handle errors and return failure response
-            // this.result.put("status", "error");
-            // this.result.put("message", e.getMessage());
-            call.reject(e.getMessage());
+            this.result.put("status", "error");
+            this.result.put("message", e.getMessage());
         }
+
+        // Recycle the processed Bitmap
+        if (processedBitmap != null && !processedBitmap.isRecycled()) {
+            processedBitmap.recycle();
+        }
+
+        Log.d("WallpaperPlugin", "Wallpaper applied successfully.");
         call.success(this.result);
     }
 
     @PluginMethod
-    public void setWallpaperURL(PluginCall call) {
-        Log.d("WallpaperPlugin", "WebView status: " + (bridge.getWebView() != null));
+    public void setWallpaperURL(PluginCall call) throws IOException {
+        // Log.d("WallpaperPlugin", "WebView status: " + (bridge.getWebView() != null));
 
         if (getContext() == null) {
             call.reject("Context is null!");
@@ -95,92 +99,64 @@ public class WallpaperPlugin extends Plugin {
 
         // Validate URL input
         if (input == null || input.isEmpty()) {
-            // this.result.put("status", "error");
-            // this.result.put("message", "URL is required!");
-            // call.resolve(this.result);
-            call.reject("URL is required!");
+            this.result.put("status", "error");
+            this.result.put("message", "URL is required!");
+            call.success(this.result);
         }
-
-        Log.d("WallpaperPlugin", "WebView is available and context is not null");
-
-        Runtime runtime = Runtime.getRuntime();
-        long maxMemory = runtime.maxMemory(); // Memoria máxima asignable
-        long usedMemory = runtime.totalMemory() - runtime.freeMemory(); // Memoria usada
-        Log.w("MemoryInfo", "Max memory: " + maxMemory + ", Used memory: " + usedMemory);
 
         InputStream inputStream = null;
         Bitmap originalBitmap = null;
         try {
             inputStream = new URL(input).openStream();
             BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = 2; // Reduce el tamaño del Bitmap a la mitad
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
             originalBitmap = BitmapFactory.decodeStream(inputStream, null, options);
-            Log.d("WallpaperPlugin", "Image loaded from URL successfully. Bitmap dimensions: " + originalBitmap.getWidth() + "x" + originalBitmap.getHeight());
         } catch (Exception e) {
-            // this.result.put("status", "error");
-            // this.result.put("message", "Failed to load the image from the URL!");
-            // call.resolve(this.result);
-            call.reject(e.getMessage());
-        } finally {
+            this.result.put("status", "error");
+            this.result.put("message", "Failed to load the image from the URL!");
+            call.success(this.result);
             if (inputStream != null) {
                 try {
                     inputStream.close();
-                } catch (IOException e) {
-                    Log.e("WallpaperPlugin", "Error closing InputStream", e);
-                    call.reject(e.getMessage());
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
                 }
+            }
+            return;
+        } finally {
+            try {
+                inputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
 
-        if (originalBitmap == null) {
-            call.reject("Original Bitmap is null!");
-            return;
-        }
-
-        runtime = Runtime.getRuntime();
-        maxMemory = runtime.maxMemory(); // Memoria máxima asignable
-        usedMemory = runtime.totalMemory() - runtime.freeMemory(); // Memoria usada
-        Log.w("MemoryInfo", "Max memory: " + maxMemory + ", Used memory: " + usedMemory);
-
         // Adapt the Bitmap based on the display mode
         Bitmap processedBitmap = adaptBitmapForDisplay(originalBitmap, display);
-        if (processedBitmap == null) {
-            // this.result.put("status", "error");
-            // this.result.put("message", "Failed to process the image!");
-            // call.resolve(this.result);
-            call.reject("Failed to process the image!");
-        }
 
-        runtime = Runtime.getRuntime();
-        maxMemory = runtime.maxMemory(); // Memoria máxima asignable
-        usedMemory = runtime.totalMemory() - runtime.freeMemory(); // Memoria usada
-        Log.w("MemoryInfo", "Max memory: " + maxMemory + ", Used memory: " + usedMemory);
+        // Recycle the original Bitmap
+        if (originalBitmap != null && !originalBitmap.isRecycled()) {
+            originalBitmap.recycle();
+        }
 
         try {
             // Apply the processed Bitmap as wallpaper
-            Log.d("WallpaperPlugin", "Applying wallpaper to target...");
             this.applyWallpaper(processedBitmap, target);
-            Log.d("WallpaperPlugin", "Wallpaper applied to target: " + target);
 
             // Return success message
             this.result.put("status", "success");
             this.result.put("message", "Wallpaper (" + display + ") updated successfully for " + target + " screen!");
         } catch (Exception e) {
             // Handle errors and return failure response
-            // this.result.put("status", "error");
-            // this.result.put("message", e.getMessage());
-            call.reject(e.getMessage());
+            this.result.put("status", "error");
+            this.result.put("message", e.getMessage());
         }
 
-        if (originalBitmap != null && !originalBitmap.isRecycled()) {
-            originalBitmap.recycle();
-        }
-
+        // Recycle the processed Bitmap
         if (processedBitmap != null && !processedBitmap.isRecycled()) {
             processedBitmap.recycle();
         }
 
-        Log.d("WallpaperPlugin", "Wallpaper applied successfully.");
         call.success(this.result);
     }
 
@@ -208,54 +184,53 @@ public class WallpaperPlugin extends Plugin {
         try {
             resultBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
         } catch (IllegalArgumentException e) {
-            Log.e("WallpaperPlugin", "Error creating result Bitmap", e);
-            return null;
+            throw new IllegalArgumentException(e.getMessage());
         }
 
         Canvas canvas = new Canvas(resultBitmap);
         Matrix matrix = new Matrix();
 
-        float scaleX = (float) targetWidth / bitmap.getWidth();
-        float scaleY = (float) targetHeight / bitmap.getHeight();
+        int bitmapWidth = bitmap.getWidth();
+        int bitmapHeight = bitmap.getHeight();
+        float scaleX = (float) targetWidth / bitmapWidth;
+        float scaleY = (float) targetHeight / bitmapHeight;
 
-        Log.d("WallpaperPlugin", "Bitmap dimensions: " + bitmap.getWidth() + "x" + bitmap.getHeight());
-        Log.d("WallpaperPlugin", "Target Width: " + targetWidth + ", Target Height: " + targetHeight);
-        Log.d("WallpaperPlugin", "ScaleX: " + scaleX + ", ScaleY: " + scaleY);
-
-        // switch (display) {
-        //     case DISPLAY_FILL:
-        //         float fillScale = Math.max(scaleX, scaleY);
-        //         matrix.setScale(fillScale, fillScale);
-        //         float fillTranslateX = (targetWidth - bitmap.getWidth() * fillScale) / 2;
-        //         float fillTranslateY = (targetHeight - bitmap.getHeight() * fillScale) / 2;
-        //         matrix.postTranslate(fillTranslateX, fillTranslateY);
-        //         break;
-        //     case DISPLAY_FIT:
-        //         float fitScale = Math.min(scaleX, scaleY);
-        //         matrix.setScale(fitScale, fitScale);
-        //         float fitTranslateX = (targetWidth - bitmap.getWidth() * fitScale) / 2;
-        //         float fitTranslateY = (targetHeight - bitmap.getHeight() * fitScale) / 2;
-        //         matrix.postTranslate(fitTranslateX, fitTranslateY);
-        //         break;
-        //     case DISPLAY_STRETCH:
-        //         matrix.setScale(scaleX, scaleY);
-        //         break;
-        //     case DISPLAY_CENTER:
-        //         float centerTranslateX = (targetWidth - bitmap.getWidth()) / 2f;
-        //         float centerTranslateY = (targetHeight - bitmap.getHeight()) / 2f;
-        //         matrix.postTranslate(centerTranslateX, centerTranslateY);
-        //         break;
-        //     default:
-        //         matrix.setScale(scaleX, scaleY);
-        //         break;
-        // }
+        float scale = 0;
+        float translateX = 0;
+        float translateY = 0;
+        switch (display) {
+            case DISPLAY_FILL:
+                scale = Math.max(scaleX, scaleY);
+                matrix.setScale(scale, scale);
+                translateX = (float) Math.round((targetWidth - bitmapWidth * scale) / 2f);
+                translateY = (float) Math.round((targetHeight - bitmapHeight * scale) / 2f);
+                matrix.postTranslate(translateX, translateY);
+                break;
+            case DISPLAY_FIT:
+                scale = Math.min(scaleX, scaleY);
+                matrix.setScale(scale, scale);
+                translateX = (float) Math.round((targetWidth - bitmapWidth * scale) / 2f);
+                translateY = (float) Math.round((targetHeight - bitmapHeight * scale) / 2f);
+                matrix.postTranslate(translateX, translateY);
+                break;
+            case DISPLAY_STRETCH:
+                matrix.setScale(scaleX, scaleY);
+                break;
+            case DISPLAY_CENTER:
+                translateX = (float) Math.round((targetWidth - bitmapWidth) / 2f);
+                translateY = (float) Math.round((targetHeight - bitmapHeight) / 2f);
+                matrix.postTranslate(translateX, translateY);
+                break;
+            default:
+                matrix.setScale(scaleX, scaleY);
+                break;
+        }
 
         try {
-            matrix.setScale(scaleX, scaleY);
+            // matrix.setScale(scaleX, scaleY);
             canvas.drawBitmap(bitmap, matrix, null);
         } catch (Exception e) {
-            Log.e("WallpaperPlugin", "Error drawing bitmap", e);
-            return null;
+            throw new IllegalArgumentException(e.getMessage());
         }
         return resultBitmap;
     }
@@ -267,7 +242,6 @@ public class WallpaperPlugin extends Plugin {
      */
     private void applyWallpaper(Bitmap bitmap, String target) throws IOException {
         WallpaperManager wallpaperManager = WallpaperManager.getInstance(getContext());
-        Log.d("WallpaperPlugin", "WallpaperManager initialized.");
 
         switch (target) {
             case TARGET_HOME:
