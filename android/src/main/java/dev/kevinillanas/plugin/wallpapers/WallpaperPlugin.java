@@ -10,7 +10,6 @@ import android.app.WallpaperManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.util.Base64;
 import android.util.Log;
@@ -36,62 +35,7 @@ public class WallpaperPlugin extends Plugin {
     private static final String DISPLAY_CENTER = "center"; // Center without scaling
 
     @PluginMethod
-    public void setWallpaperBase64(PluginCall call) {
-        // Extract parameters from the plugin call
-        String input = call.getString("input");
-        String target = call.getString("target", TARGET_BOTH);
-        String display = call.getString("display", DISPLAY_FILL);
-
-        // Validate input
-        if (input == null || input.isEmpty()) {
-            // this.result.put("status", "error");
-            // this.result.put("message", "Base64 string is required!");
-            // call.resolve(this.result);
-            call.reject("Base64 string is required!");
-        }
-
-        // Decode the base64 string into a Bitmap
-        Bitmap originalBitmap = base64ToBitmap(input);
-
-        // Adapt the Bitmap based on the display mode
-        Bitmap processedBitmap = adaptBitmapForDisplay(originalBitmap, display);
-
-        // Recycle the original Bitmap
-        if (originalBitmap != null && !originalBitmap.isRecycled()) {
-            originalBitmap.recycle();
-        }
-
-        try {
-            // Apply the processed Bitmap as wallpaper
-            this.applyWallpaper(processedBitmap, target);
-
-            // Return success message
-            this.result.put("status", "success");
-            this.result.put("message", "Wallpaper (" + display + ") updated successfully for " + target + " screen!");
-        } catch (Exception e) {
-            // Handle errors and return failure response
-            this.result.put("status", "error");
-            this.result.put("message", e.getMessage());
-        }
-
-        // Recycle the processed Bitmap
-        if (processedBitmap != null && !processedBitmap.isRecycled()) {
-            processedBitmap.recycle();
-        }
-
-        Log.d("WallpaperPlugin", "Wallpaper applied successfully.");
-        call.success(this.result);
-    }
-
-    @PluginMethod
-    public void setWallpaperURL(PluginCall call) throws IOException {
-        // Log.d("WallpaperPlugin", "WebView status: " + (bridge.getWebView() != null));
-
-        if (getContext() == null) {
-            call.reject("Context is null!");
-            return;
-        }
-
+    public void setFromBase64(PluginCall call) {
         // Extract parameters from the plugin call
         String input = call.getString("input");
         String target = call.getString("target", TARGET_BOTH);
@@ -104,143 +48,76 @@ public class WallpaperPlugin extends Plugin {
             call.success(this.result);
         }
 
-        InputStream inputStream = null;
-        Bitmap originalBitmap = null;
-        try {
-            inputStream = new URL(input).openStream();
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-            originalBitmap = BitmapFactory.decodeStream(inputStream, null, options);
-        } catch (Exception e) {
-            this.result.put("status", "error");
-            this.result.put("message", "Failed to load the image from the URL!");
-            call.success(this.result);
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
-            }
-            return;
-        } finally {
-            try {
-                inputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        // Adapt the Bitmap based on the display mode
-        Bitmap processedBitmap = adaptBitmapForDisplay(originalBitmap, display);
-
-        // Recycle the original Bitmap
-        if (originalBitmap != null && !originalBitmap.isRecycled()) {
-            originalBitmap.recycle();
-        }
+        // Decode the base64 string into a Bitmap
+        byte[] decodedBytes = Base64.decode(input, Base64.DEFAULT);
+        Bitmap bitmapDecoded = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
 
         try {
             // Apply the processed Bitmap as wallpaper
-            this.applyWallpaper(processedBitmap, target);
+            this.applyWallpaper(bitmapDecoded, target, display);
 
             // Return success message
             this.result.put("status", "success");
             this.result.put("message", "Wallpaper (" + display + ") updated successfully for " + target + " screen!");
         } catch (Exception e) {
-            // Handle errors and return failure response
             this.result.put("status", "error");
             this.result.put("message", e.getMessage());
         }
 
-        // Recycle the processed Bitmap
-        if (processedBitmap != null && !processedBitmap.isRecycled()) {
-            processedBitmap.recycle();
-        }
-
+        // Return the result to the caller
         call.success(this.result);
     }
 
-    /**
-     * Converts a base64 string into a Bitmap object.
-     * @param base64 The base64 string to convert.
-     * @return The Bitmap object converted from the base64 string.
-     */
-    private Bitmap base64ToBitmap(String base64) {
-        byte[] decodedBytes = Base64.decode(base64, Base64.DEFAULT);
-        return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
-    }
+    @PluginMethod
+    public void setFromURL(PluginCall call) throws IOException {
+        // Extract parameters from the plugin call
+        String input = call.getString("input");
+        String target = call.getString("target", TARGET_BOTH);
+        String display = call.getString("display", DISPLAY_FILL);
 
-    /**
-     * Adapts the Bitmap to fit the display based on the specified mode.
-     * @param bitmap The Bitmap to adapt.
-     * @param display The display mode to apply.
-     * @return The adapted Bitmap based on the display mode.
-     */
-    private Bitmap adaptBitmapForDisplay(Bitmap bitmap, String display) {
-        int targetWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
-        int targetHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
-
-        Bitmap resultBitmap;
-        try {
-            resultBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException(e.getMessage());
+        // Validate URL input
+        if (input == null || input.isEmpty()) {
+            this.result.put("status", "error");
+            this.result.put("message", "URL is required!");
+            call.success(this.result);
         }
 
-        Canvas canvas = new Canvas(resultBitmap);
-        Matrix matrix = new Matrix();
-
-        int bitmapWidth = bitmap.getWidth();
-        int bitmapHeight = bitmap.getHeight();
-        float scaleX = (float) targetWidth / bitmapWidth;
-        float scaleY = (float) targetHeight / bitmapHeight;
-
-        float scale = 0;
-        float translateX = 0;
-        float translateY = 0;
-        switch (display) {
-            case DISPLAY_FILL:
-                scale = Math.max(scaleX, scaleY);
-                matrix.setScale(scale, scale);
-                translateX = (float) Math.round((targetWidth - bitmapWidth * scale) / 2f);
-                translateY = (float) Math.round((targetHeight - bitmapHeight * scale) / 2f);
-                matrix.postTranslate(translateX, translateY);
-                break;
-            case DISPLAY_FIT:
-                scale = Math.min(scaleX, scaleY);
-                matrix.setScale(scale, scale);
-                translateX = (float) Math.round((targetWidth - bitmapWidth * scale) / 2f);
-                translateY = (float) Math.round((targetHeight - bitmapHeight * scale) / 2f);
-                matrix.postTranslate(translateX, translateY);
-                break;
-            case DISPLAY_STRETCH:
-                matrix.setScale(scaleX, scaleY);
-                break;
-            case DISPLAY_CENTER:
-                translateX = (float) Math.round((targetWidth - bitmapWidth) / 2f);
-                translateY = (float) Math.round((targetHeight - bitmapHeight) / 2f);
-                matrix.postTranslate(translateX, translateY);
-                break;
-            default:
-                matrix.setScale(scaleX, scaleY);
-                break;
-        }
+        // Load the Bitmap from the URL
+        InputStream inputStream = inputStream = new URL(input).openStream();
+        Bitmap originalBitmap = BitmapFactory.decodeStream(inputStream);
 
         try {
-            // matrix.setScale(scaleX, scaleY);
-            canvas.drawBitmap(bitmap, matrix, null);
+            // Apply the processed Bitmap as wallpaper
+            this.applyWallpaper(originalBitmap, target, display);
+
+            // Return success message
+            this.result.put("status", "success");
+            this.result.put("message", "Wallpaper (" + display + ") updated successfully for " + target + " screen!");
         } catch (Exception e) {
-            throw new IllegalArgumentException(e.getMessage());
+            this.result.put("status", "error");
+            this.result.put("message", e.getMessage());
         }
-        return resultBitmap;
+
+        // Close the input stream
+        if (inputStream != null) {
+            inputStream.close();
+        }
+
+        // Return the result to the caller
+        call.success(this.result);
     }
 
     /**
      * Applies the Bitmap as wallpaper based on the specified target.
      * @param bitmap The Bitmap to apply as wallpaper.
      * @param target The target screen to apply the wallpaper to.
+     * @param display The display mode to apply.
      */
-    private void applyWallpaper(Bitmap bitmap, String target) throws IOException {
+    private void applyWallpaper(Bitmap bitmap, String target, String display) throws IOException {
+        // Adapt the Bitmap based on the display mode
+        Bitmap processedBitmap = adaptBitmapForDisplay(bitmap, display);
+
+        // Set the processed Bitmap as wallpaper
         WallpaperManager wallpaperManager = WallpaperManager.getInstance(getContext());
 
         switch (target) {
@@ -257,5 +134,60 @@ public class WallpaperPlugin extends Plugin {
                 wallpaperManager.setBitmap(bitmap, null, true);
                 break;
         }
+
+        if (wallpaperManager != null) {
+            wallpaperManager.forgetLoadedWallpaper();
+        }
+    }
+
+    /**
+     * Adapts the Bitmap to fit the display based on the specified mode.
+     * @param bitmap The Bitmap to adapt.
+     * @param display The display mode to apply.
+     * @return The adapted Bitmap based on the display mode.
+     */
+    private Bitmap adaptBitmapForDisplay(Bitmap bitmap, String display) {
+        Matrix matrix = new Matrix();
+
+        int targetWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
+        int targetHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
+
+        int bitmapWidth = bitmap.getWidth();
+        int bitmapHeight = bitmap.getHeight();
+        float scaleX = (float) targetWidth / bitmapWidth;
+        float scaleY = (float) targetHeight / bitmapHeight;
+
+        float scale = 0;
+        float translateX = 0;
+        float translateY = 0;
+        switch (display) {
+            case DISPLAY_FILL:
+                scale = Math.max(scaleX, scaleY);
+                matrix.postScale(scale, scale);
+                translateX = (float) Math.round((targetWidth - bitmapWidth * scale) / 2f);
+                translateY = (float) Math.round((targetHeight - bitmapHeight * scale) / 2f);
+                matrix.postTranslate(translateX, translateY);
+                break;
+            case DISPLAY_FIT:
+                scale = Math.min(scaleX, scaleY);
+                matrix.postScale(scale, scale);
+                translateX = (float) Math.round((targetWidth - bitmapWidth * scale) / 2f);
+                translateY = (float) Math.round((targetHeight - bitmapHeight * scale) / 2f);
+                matrix.postTranslate(translateX, translateY);
+                break;
+            case DISPLAY_STRETCH:
+                matrix.postScale(scaleX, scaleY);
+                break;
+            case DISPLAY_CENTER:
+                translateX = (float) Math.round((targetWidth - bitmapWidth) / 2f);
+                translateY = (float) Math.round((targetHeight - bitmapHeight) / 2f);
+                matrix.postTranslate(translateX, translateY);
+                break;
+            default:
+                matrix.postScale(scaleX, scaleY);
+                break;
+        }
+
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
     }
 }

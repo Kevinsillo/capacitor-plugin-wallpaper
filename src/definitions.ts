@@ -31,16 +31,16 @@ export interface WallpaperOptions {
  */
 export interface WallpapersPlugin {
   /**
-   * Sets the wallpaper from a base64 string.
-   * @param options The options object to configure the wallpaper.
-   * @returns A promise that resolves when the wallpaper is set successfully.
-   */
-  setWallpaperBase64(options: WallpaperOptions): Promise<void>
-
-  /**
    * Sets the wallpaper from a URL.
    * @param options The options object to configure the wallpaper.
    * @returns A promise that resolves when the wallpaper is set successfully.
    */
-  setWallpaperURL(options: WallpaperOptions): Promise<void>
+  setFromURL(options: WallpaperOptions): Promise<void>
+
+  /**
+   * Sets the wallpaper from a base64 string.
+   * @param options The options object to configure the wallpaper.
+   * @returns A promise that resolves when the wallpaper is set successfully.
+   */
+  setFromBase64(options: WallpaperOptions): Promise<void>
 }
