@@ -10,6 +10,7 @@ import android.app.WallpaperManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.util.Base64;
 import android.util.Log;
@@ -122,22 +123,22 @@ public class WallpaperPlugin extends Plugin {
 
         switch (target) {
             case TARGET_HOME:
-                wallpaperManager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM);
+                wallpaperManager.setBitmap(processedBitmap, null, true, WallpaperManager.FLAG_SYSTEM);
                 break;
             case TARGET_LOCK:
-                wallpaperManager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK);
+                wallpaperManager.setBitmap(processedBitmap, null, true, WallpaperManager.FLAG_LOCK);
                 break;
             case TARGET_BOTH:
-                wallpaperManager.setBitmap(bitmap, null, true);
+                wallpaperManager.setBitmap(processedBitmap, null, true);
                 break;
             default:
-                wallpaperManager.setBitmap(bitmap, null, true);
+                wallpaperManager.setBitmap(processedBitmap, null, true);
                 break;
         }
 
-        if (wallpaperManager != null) {
-            wallpaperManager.forgetLoadedWallpaper();
-        }
+        // if (wallpaperManager != null) {
+        //     wallpaperManager.forgetLoadedWallpaper();
+        // }
     }
 
     /**
@@ -147,47 +148,50 @@ public class WallpaperPlugin extends Plugin {
      * @return The adapted Bitmap based on the display mode.
      */
     private Bitmap adaptBitmapForDisplay(Bitmap bitmap, String display) {
-        Matrix matrix = new Matrix();
-
         int targetWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
         int targetHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
 
         int bitmapWidth = bitmap.getWidth();
         int bitmapHeight = bitmap.getHeight();
+
         float scaleX = (float) targetWidth / bitmapWidth;
         float scaleY = (float) targetHeight / bitmapHeight;
 
         float scale = 0;
         float translateX = 0;
         float translateY = 0;
+        Matrix matrix = new Matrix();
         switch (display) {
             case DISPLAY_FILL:
                 scale = Math.max(scaleX, scaleY);
-                matrix.postScale(scale, scale);
-                translateX = (float) Math.round((targetWidth - bitmapWidth * scale) / 2f);
-                translateY = (float) Math.round((targetHeight - bitmapHeight * scale) / 2f);
+                matrix.setScale(scale, scale);
+                translateX = (targetWidth - bitmapWidth * scale) / 2;
+                translateY = (targetHeight - bitmapHeight * scale) / 2;
                 matrix.postTranslate(translateX, translateY);
                 break;
             case DISPLAY_FIT:
                 scale = Math.min(scaleX, scaleY);
-                matrix.postScale(scale, scale);
-                translateX = (float) Math.round((targetWidth - bitmapWidth * scale) / 2f);
-                translateY = (float) Math.round((targetHeight - bitmapHeight * scale) / 2f);
+                matrix.setScale(scale, scale);
+                translateX = (targetWidth - bitmapWidth * scale) / 2;
+                translateY = (targetHeight - bitmapHeight * scale) / 2;
                 matrix.postTranslate(translateX, translateY);
                 break;
             case DISPLAY_STRETCH:
-                matrix.postScale(scaleX, scaleY);
+                matrix.setScale(scaleX, scaleY);
                 break;
             case DISPLAY_CENTER:
-                translateX = (float) Math.round((targetWidth - bitmapWidth) / 2f);
-                translateY = (float) Math.round((targetHeight - bitmapHeight) / 2f);
+                translateX = (targetWidth - bitmapWidth) / 2f;
+                translateY = (targetHeight - bitmapHeight) / 2f;
                 matrix.postTranslate(translateX, translateY);
                 break;
             default:
-                matrix.postScale(scaleX, scaleY);
+                matrix.setScale(scaleX, scaleY);
                 break;
         }
 
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        Bitmap resultBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(resultBitmap);
+        canvas.drawBitmap(bitmap, matrix, null);
+        return resultBitmap;
     }
 }
