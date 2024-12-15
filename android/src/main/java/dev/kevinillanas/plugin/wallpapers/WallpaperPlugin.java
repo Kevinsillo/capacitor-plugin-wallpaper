@@ -121,6 +121,7 @@ public class WallpaperPlugin extends Plugin {
         // Set the processed Bitmap as wallpaper
         WallpaperManager wallpaperManager = WallpaperManager.getInstance(getContext());
 
+        // Set the wallpaper based on the target screen
         switch (target) {
             case TARGET_HOME:
                 wallpaperManager.setBitmap(processedBitmap, null, true, WallpaperManager.FLAG_SYSTEM);
@@ -135,63 +136,79 @@ public class WallpaperPlugin extends Plugin {
                 wallpaperManager.setBitmap(processedBitmap, null, true);
                 break;
         }
-
-        // if (wallpaperManager != null) {
-        //     wallpaperManager.forgetLoadedWallpaper();
-        // }
     }
 
     /**
-     * Adapts the Bitmap to fit the display based on the specified mode.
-     * @param bitmap The Bitmap to adapt.
-     * @param display The display mode to apply.
-     * @return The adapted Bitmap based on the display mode.
+     * Resizes an image according to the desired display type to fit the screen as a wallpaper.
+     * @param bitmap The original image to be resized.
+     * @param display The display type: "DISPLAY_FILL", "DISPLAY_FIT", "DISPLAY_STRETCH", or "DISPLAY_CENTER".
+     * @return The resized image adjusted to the specified display type.
      */
     private Bitmap adaptBitmapForDisplay(Bitmap bitmap, String display) {
+        // Get screen dimensions (width and height) once
         int targetWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
         int targetHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
 
+        // Get the dimensions of the original image
         int bitmapWidth = bitmap.getWidth();
         int bitmapHeight = bitmap.getHeight();
 
+        // Calculate scaling factors based on screen dimensions
         float scaleX = (float) targetWidth / bitmapWidth;
         float scaleY = (float) targetHeight / bitmapHeight;
 
-        float scale = 0;
-        float translateX = 0;
-        float translateY = 0;
-        Matrix matrix = new Matrix();
+        // Switch between different display types
+        Bitmap resultBitmap = null;
         switch (display) {
             case DISPLAY_FILL:
-                scale = Math.max(scaleX, scaleY);
-                matrix.setScale(scale, scale);
-                translateX = (targetWidth - bitmapWidth * scale) / 2;
-                translateY = (targetHeight - bitmapHeight * scale) / 2;
-                matrix.postTranslate(translateX, translateY);
+                // Scale the image to fill the screen (may crop the image)
+                float scaleFill = Math.max(scaleX, scaleY);
+                int fillWidth = Math.round(bitmapWidth * scaleFill);
+                int fillHeight = Math.round(bitmapHeight * scaleFill);
+                Bitmap scaledFill = Bitmap.createScaledBitmap(bitmap, fillWidth, fillHeight, true);
+                // Crop the image to the exact screen size
+                float cropX = (fillWidth - targetWidth) / 2;
+                float cropY = (fillHeight - targetHeight) / 2;
+                resultBitmap = Bitmap.createBitmap(scaledFill, cropY, cropY, targetWidth, targetHeight);
                 break;
+
             case DISPLAY_FIT:
-                scale = Math.min(scaleX, scaleY);
-                matrix.setScale(scale, scale);
-                translateX = (targetWidth - bitmapWidth * scale) / 2;
-                translateY = (targetHeight - bitmapHeight * scale) / 2;
-                matrix.postTranslate(translateX, translateY);
+                // Scale the image to fit within the screen without cropping
+                float scaleFit = Math.min(scaleX, scaleY);
+                int fitWidth = Math.round(bitmapWidth * scaleFit);
+                int fitHeight = Math.round(bitmapHeight * scaleFit);
+                Bitmap scaledFit = Bitmap.createScaledBitmap(bitmap, fitWidth, fitHeight, true);
+                // Create a new bitmap of the exact screen size
+                resultBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
+                Canvas canvasFit = new Canvas(resultBitmap);
+                // Calculate offsets to center the image
+                int fitOffsetX = (targetWidth - fitWidth) / 2;
+                int fitOffsetY = (targetHeight - fitHeight) / 2;
+                // Draw the centered scaled image
+                canvasFit.drawBitmap(scaledFit, fitOffsetX, fitOffsetY, null);
                 break;
+
             case DISPLAY_STRETCH:
-                matrix.setScale(scaleX, scaleY);
+                // Stretch the image to fill the entire screen
+                resultBitmap = Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true);
                 break;
+
             case DISPLAY_CENTER:
-                translateX = (targetWidth - bitmapWidth) / 2f;
-                translateY = (targetHeight - bitmapHeight) / 2f;
-                matrix.postTranslate(translateX, translateY);
+                // Center the image without resizing
+                resultBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
+                Canvas canvasCenter = new Canvas(resultBitmap);
+                int offsetX = (targetWidth - bitmapWidth) / 2;
+                int offsetY = (targetHeight - bitmapHeight) / 2;
+                // Draw the image centered on the canvas
+                canvasCenter.drawBitmap(bitmap, offsetX, offsetY, null);
                 break;
+
             default:
-                matrix.setScale(scaleX, scaleY);
+                // Default case: scale the image to fill the screen
+                resultBitmap = Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true);
                 break;
         }
 
-        Bitmap resultBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(resultBitmap);
-        canvas.drawBitmap(bitmap, matrix, null);
         return resultBitmap;
     }
 }
