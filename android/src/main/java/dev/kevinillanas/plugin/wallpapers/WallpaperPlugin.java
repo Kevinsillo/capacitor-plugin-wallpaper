@@ -8,6 +8,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.PermissionState;
 
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.app.Activity;
 import android.Manifest;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -40,11 +43,14 @@ public class WallpaperPlugin extends Plugin {
 
     @Override
     public void load() {
-        implementation = new Wallpaper(getContext());
+        implementation = new Wallpaper();
     }
 
     @PluginMethod
     public void setFromBase64(PluginCall call) {
+        // Get the current activity
+        AppCompatActivity activity = this.getActivity();
+
         // Extract parameters from the plugin call
         String input = call.getString("input");
         String target = call.getString("target", implementation.TARGET_BOTH);
@@ -55,13 +61,18 @@ public class WallpaperPlugin extends Plugin {
             call.reject("Base64 string is required!");
         }
 
+        if (activity.isFinishing()) {
+            call.reject("App is finishing");
+            return;
+        }
+
         // Decode the base64 string into a Bitmap
         byte[] decodedBytes = Base64.decode(input, Base64.DEFAULT);
         Bitmap bitmapDecoded = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
 
         try {
             // Apply the processed Bitmap as wallpaper
-            implementation.applyWallpaper(bitmapDecoded, target, display);
+            implementation.applyWallpaper(activity, bitmapDecoded, target, display);
 
             // Return success message
             JSObject result = new JSObject();
@@ -74,6 +85,9 @@ public class WallpaperPlugin extends Plugin {
 
     @PluginMethod
     public void setFromURL(PluginCall call) throws IOException {
+        // Get the current activity
+        AppCompatActivity activity = this.getActivity();
+
         // Extract parameters from the plugin call
         String input = call.getString("input");
         String target = call.getString("target", implementation.TARGET_BOTH);
@@ -93,7 +107,7 @@ public class WallpaperPlugin extends Plugin {
 
         try {
             // Apply the processed Bitmap as wallpaper
-            implementation.applyWallpaper(originalBitmap, target, display);
+            implementation.applyWallpaper(activity, originalBitmap, target, display);
 
             // Return success message
             JSObject result = new JSObject();
