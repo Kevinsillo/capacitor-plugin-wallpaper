@@ -9,12 +9,6 @@ export class WallpaperWeb extends WebPlugin implements WallpaperPlugin {
     return Promise.reject('Wallpapers plugin is not implemented on the web.')
   }
 
-  // Asynchronously set the wallpaper base64 (not implemented for web)
-  async setFromBase64(): Promise<WallpaperResponse> {
-    // Log a warning indicating that the plugin is not available on the web
-    return Promise.reject('Wallpapers plugin is not implemented on the web.')
-  }
-
   // Asynchronously request permissions (not implemented for web)
   async requestPermissions(): Promise<WallpaperResponse> {
     // Log a warning indicating that the plugin is not available on the web
